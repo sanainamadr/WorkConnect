@@ -1,8 +1,5 @@
-// Use existing API_BASE if defined, otherwise create it (avoiding redeclaration error)
-var API_BASE = window.API_BASE || "http://localhost:3000/api/auth";
-if (!window.API_BASE) {
-  window.API_BASE = API_BASE; // Make it globally available
-}
+// Use centralized API config (port 3000)
+const API_BASE = "http://localhost:3000/api/auth";
  // your backend base URL
 
 // ---------- REGISTER ----------
@@ -90,7 +87,7 @@ async function handleRegister(e) {
     window.location.href = "login.html";
   } catch (err) {
     if (err.message.includes("fetch")) {
-      alert("❌ Cannot connect to server. Please make sure the backend server is running on port 4000.");
+      alert("❌ Cannot connect to server. Please make sure the backend server is running on port 3000.");
       console.error("Network error:", err);
     } else {
       alert("❌ " + err.message);
@@ -122,9 +119,13 @@ async function handleLogin(e) {
     const data = await res.json();
     console.log("Login response:", data); // ✅ Check this in dev tools
 
-    // ✅ Store token and user
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
+    // ✅ Store token and user safely
+    try {
+      if (data.token) localStorage.setItem("token", data.token);
+      if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
 
     alert("✅ Login successful!");
     
@@ -137,7 +138,7 @@ async function handleLogin(e) {
     }
   } catch (err) {
     if (err.message.includes("fetch") || err.name === "TypeError") {
-      alert("❌ Cannot connect to server. Please make sure the backend server is running on port 4000.");
+      alert("❌ Cannot connect to server. Please make sure the backend server is running on port 3000.");
       console.error("Network error:", err);
     } else {
       alert("❌ " + err.message);
@@ -151,12 +152,22 @@ function getToken() {
 }
 
 function getUser() {
-  return JSON.parse(localStorage.getItem("user"));
+  try {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error("Error parsing user from localStorage:", error);
+    return null;
+  }
 }
 
 function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  } catch (error) {
+    console.error("Error clearing localStorage:", error);
+  }
   window.location.href = "login.html";
 }
 

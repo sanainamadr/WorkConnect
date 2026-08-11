@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:4000/api";
+const API_BASE = "http://localhost:3000/api";
 
 // Get service slug from URL (featured job slug)
 const serviceSlug = new URLSearchParams(window.location.search).get("slug") || 

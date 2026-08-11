@@ -532,7 +532,6 @@ const SkillLinkHome = (() => {
   }
 
   function isValidCoordinate(lat, lng) {
-    // Validate coordinates are within valid ranges
     return (
       typeof lat === 'number' && 
       typeof lng === 'number' &&
@@ -573,7 +572,6 @@ const SkillLinkHome = (() => {
 
   async function reverseGeocode(lat, lng) {
     try {
-      // Validate coordinates first
       if (!isValidCoordinate(lat, lng)) {
         updateLocationUI("Invalid coordinates. Please try again.", "error");
         return;
@@ -581,10 +579,8 @@ const SkillLinkHome = (() => {
 
       updateLocationUI("Fetching address…");
       
-      // Add delay to respect Nominatim rate limits (1 request per second)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Try primary geocoding service
       let data = null;
       try {
         const res = await fetch(
@@ -604,7 +600,6 @@ const SkillLinkHome = (() => {
         data = await res.json();
       } catch (primaryError) {
         console.warn("Primary geocoding failed, trying alternative...", primaryError);
-        // Fallback to alternative method - use coordinates directly
         const address = `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         if (selectors.locationInput) {
           selectors.locationInput.value = address;
@@ -616,11 +611,9 @@ const SkillLinkHome = (() => {
       }
       
       if (data?.display_name) {
-        // Try to extract a cleaner address
         const address = data.address || {};
         let cleanAddress = data.display_name;
         
-        // Build cleaner address from components (prioritize local info)
         const addressParts = [];
         if (address.road) addressParts.push(address.road);
         if (address.suburb || address.neighbourhood) addressParts.push(address.suburb || address.neighbourhood);
@@ -634,7 +627,6 @@ const SkillLinkHome = (() => {
           cleanAddress = addressParts.join(", ");
         }
         
-        // For Indian addresses, prefer local format
         if (address.country === "India" || address.country_code === "in") {
           const localParts = [];
           if (address.road) localParts.push(address.road);
@@ -655,7 +647,6 @@ const SkillLinkHome = (() => {
         setMapMarker(lat, lng, cleanAddress || data.display_name);
         updateLocationUI("Location saved! Verify address and edit if needed.", "success");
       } else {
-        // Fallback: use coordinates
         const address = `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         if (selectors.locationInput) {
           selectors.locationInput.value = address;
@@ -666,7 +657,6 @@ const SkillLinkHome = (() => {
       }
     } catch (error) {
       console.error("Reverse geocode failed", error);
-      // Fallback: save coordinates
       const address = `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
       if (selectors.locationInput) {
         selectors.locationInput.value = address;
@@ -674,7 +664,6 @@ const SkillLinkHome = (() => {
       saveLocation(address, lat, lng);
       setMapMarker(lat, lng, address);
       
-      // Provide more specific error messages
       if (error.message.includes("HTTP")) {
         updateLocationUI("Service temporarily unavailable. Coordinates saved. Please edit address manually.", "error");
       } else if (error.name === "TypeError" && error.message.includes("fetch")) {
@@ -692,7 +681,6 @@ const SkillLinkHome = (() => {
       return;
     }
 
-    // Wait for Leaflet to load
     function tryInitMap() {
       if (typeof L === "undefined") {
         console.warn("Leaflet not loaded yet, retrying...");
@@ -700,25 +688,19 @@ const SkillLinkHome = (() => {
         return;
       }
 
-      try {
-        // Ensure container is visible
-        if (mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
-          console.warn("Map container not visible, waiting...");
-          setTimeout(tryInitMap, 200);
-          return;
-        }
+      // ✅ FIX 1: Removed the offsetWidth/offsetHeight check that caused infinite loop.
+      // Tailwind's h-[420px] is a CSS class that JS cannot always measure before paint.
 
+      try {
         const savedCoords = JSON.parse(localStorage.getItem("userLocationCoords") || "null");
         const defaultPosition = savedCoords ? [savedCoords.lat, savedCoords.lng] : [18.5204, 73.8567];
         const defaultZoom = savedCoords ? 14 : 12;
 
-        // Initialize map
         mapInstance = L.map(mapContainer, {
           zoomControl: true,
           attributionControl: true
         }).setView(defaultPosition, defaultZoom);
         
-        // Add tile layer with multiple fallbacks
         const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
@@ -728,7 +710,9 @@ const SkillLinkHome = (() => {
 
         tileLayer.addTo(mapInstance);
 
-        // Fallback tile layer if primary fails
+        // ✅ FIX 2: Force Leaflet to recalculate container size after DOM has painted.
+        setTimeout(() => { mapInstance.invalidateSize(); }, 300);
+
         tileLayer.on('tileerror', () => {
           console.warn("Primary tile layer failed, using backup");
           L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -750,7 +734,6 @@ const SkillLinkHome = (() => {
           reverseGeocode(lat, lng);
         });
 
-        // Handle map load success
         mapInstance.whenReady(() => {
           console.log("Map loaded successfully");
           updateLocationUI("Map ready. Click to set location or use GPS.", "success");
@@ -760,7 +743,6 @@ const SkillLinkHome = (() => {
       } catch (error) {
         console.error("Map initialization failed:", error);
         updateLocationUI("Map failed to load. You can still enter address manually.", "error");
-        // Show fallback message
         mapContainer.innerHTML = `
           <div class="flex items-center justify-center h-full bg-gray-100 rounded-lg">
             <div class="text-center p-6">
@@ -772,7 +754,6 @@ const SkillLinkHome = (() => {
       }
     }
 
-    // Start initialization
     tryInitMap();
   }
 
@@ -798,10 +779,8 @@ const SkillLinkHome = (() => {
       
       updateLocationUI("Locating you… Please allow location access and wait for accurate position.");
       
-      // Initialize map if not already done
       if (!mapInstance && document.getElementById("map")) {
         initMap();
-        // Wait a bit for map to initialize
         setTimeout(() => {
           requestGPSLocation();
         }, 500);
@@ -815,26 +794,22 @@ const SkillLinkHome = (() => {
       let attempts = 0;
       const maxAttempts = 3;
 
-      // Use watchPosition for better accuracy, then clear after getting good position
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           attempts++;
           const { latitude, longitude, accuracy } = position.coords;
           
-          // Validate coordinates
           if (!isValidCoordinate(latitude, longitude)) {
             updateLocationUI("Invalid GPS coordinates received. Please try again.", "error");
             if (watchId !== null) navigator.geolocation.clearWatch(watchId);
             return;
           }
 
-          // Check accuracy - if accuracy is poor, wait for better reading
           if (accuracy > 100 && attempts < maxAttempts) {
             updateLocationUI(`Getting more accurate location… (Accuracy: ${Math.round(accuracy)}m)`, "info");
             return;
           }
 
-          // Clear watch once we have a good position
           if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
@@ -842,13 +817,11 @@ const SkillLinkHome = (() => {
 
           updateLocationUI(`Location found! (Accuracy: ${Math.round(accuracy)}m) Fetching address…`);
           
-          // Center map on location
           if (mapInstance) {
             mapInstance.setView([latitude, longitude], Math.max(15, Math.min(18, Math.round(15 - Math.log10(accuracy)))));
             setMapMarker(latitude, longitude, "Your location");
           }
           
-          // Reverse geocode with better error handling
           reverseGeocode(latitude, longitude);
         },
         (error) => {
@@ -874,11 +847,10 @@ const SkillLinkHome = (() => {
         { 
           enableHighAccuracy: true, 
           timeout: 20000,
-          maximumAge: 0 // Don't use cached position, get fresh one
+          maximumAge: 0
         }
       );
 
-      // Fallback timeout
       setTimeout(() => {
         if (watchId !== null) {
           navigator.geolocation.clearWatch(watchId);
@@ -910,18 +882,15 @@ const SkillLinkHome = (() => {
     
     if (!profileMenu || !profileButton || !profileDropdown) return;
     
-    // Check if user is logged in
     try {
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       const token = localStorage.getItem("token");
       
       if (user && token) {
-        // User is logged in - show profile menu
         profileMenu.classList.remove("hidden");
         if (loginLink) loginLink.classList.add("hidden");
         
-        // Set user info
         const firstName = user.firstName || "";
         const lastName = user.lastName || "";
         const fullName = `${firstName} ${lastName}`.trim() || user.userName || "User";
@@ -929,13 +898,11 @@ const SkillLinkHome = (() => {
         const role = user.role || "";
         const avatarUrl = user.avatarUrl || "";
         
-        // Set profile name
         const profileName = document.getElementById("profile-name");
         if (profileName) {
           profileName.textContent = fullName;
         }
         
-        // Set dropdown info
         const dropdownName = document.getElementById("dropdown-name");
         const dropdownEmail = document.getElementById("dropdown-email");
         const dropdownRole = document.getElementById("dropdown-role");
@@ -946,7 +913,6 @@ const SkillLinkHome = (() => {
           dropdownRole.textContent = role === "worker" ? "Worker" : role === "employer" ? "Employer" : "User";
         }
         
-        // Set avatar/initials
         const profileAvatar = document.getElementById("profile-avatar");
         const profileInitials = document.getElementById("profile-initials");
         
@@ -966,7 +932,6 @@ const SkillLinkHome = (() => {
           profileAvatar.style.backgroundImage = "";
         }
         
-        // Set dashboard link based on role
         const dashboardLink = document.getElementById("profile-dashboard-link");
         if (dashboardLink) {
           if (role === "worker") {
@@ -978,20 +943,17 @@ const SkillLinkHome = (() => {
           }
         }
         
-        // Toggle dropdown on click
         profileButton.addEventListener("click", (e) => {
           e.stopPropagation();
           profileDropdown.classList.toggle("hidden");
         });
         
-        // Close dropdown when clicking outside
         document.addEventListener("click", (e) => {
           if (!profileMenu.contains(e.target)) {
             profileDropdown.classList.add("hidden");
           }
         });
       } else {
-        // User not logged in - hide profile menu, show login link
         profileMenu.classList.add("hidden");
         if (loginLink) loginLink.classList.remove("hidden");
       }
@@ -1003,7 +965,6 @@ const SkillLinkHome = (() => {
   }
 
   async function loadLiveStats() {
-    // Get elements directly instead of relying on selectors object
     const statsHomesServiced = document.getElementById("stats-homes-serviced");
     const statsPlumbing = document.getElementById("stats-plumbing");
     const statsCleaning = document.getElementById("stats-cleaning");
@@ -1011,192 +972,88 @@ const SkillLinkHome = (() => {
     
     if (!statsHomesServiced || !statsPlumbing || !statsCleaning || !statsElectrician) {
       console.warn("⚠️ Stats elements not found. Retrying in 1 second...");
-      console.log("Looking for elements:", {
-        homes: !!statsHomesServiced,
-        plumbing: !!statsPlumbing,
-        cleaning: !!statsCleaning,
-        electrician: !!statsElectrician
-      });
       setTimeout(loadLiveStats, 1000);
       return;
     }
     
     console.log("🔄 Loading live stats from backend...");
     
-    // Show loading state
-    if (statsHomesServiced && statsHomesServiced.innerHTML.includes("animate-pulse")) {
-      // Already showing loading, continue
-    }
-    
     try {
-      // Try multiple API base URLs
       const apiBases = [
         "http://localhost:3000/api",
-        "http://localhost:4000/api",
-        "http://127.0.0.1:3000/api",
-        "http://127.0.0.1:4000/api"
+        "http://127.0.0.1:3000/api"
       ];
       
       let stats = null;
       let lastError = null;
-      let successfulUrl = null;
       
-      // Try each API base URL until one works
       for (const apiBase of apiBases) {
         try {
           console.log(`🔍 Trying ${apiBase}/stats...`);
           const response = await fetch(`${apiBase}/stats`, {
             method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             cache: "no-cache",
             mode: "cors",
           });
           
-          console.log(`📡 Response from ${apiBase}:`, response.status, response.statusText);
-          
           if (response.ok) {
             const data = await response.json();
-            console.log("📊 Stats data received:", data);
-            
             if (data.success && data.stats) {
               stats = data.stats;
-              successfulUrl = apiBase;
-              console.log("✅ Stats loaded successfully from", apiBase);
-              break; // Success, exit loop
-            } else {
-              console.warn("⚠️ Invalid stats data format:", data);
+              break;
             }
-          } else {
-            console.warn(`⚠️ HTTP ${response.status} from ${apiBase}/stats`);
           }
         } catch (error) {
           lastError = error;
-          console.warn(`❌ Failed to fetch stats from ${apiBase}:`, error.message);
-          continue; // Try next URL
+          continue;
         }
       }
       
       if (!stats) {
-        throw lastError || new Error("Failed to fetch stats from all endpoints. Make sure the backend server is running.");
+        throw lastError || new Error("Failed to fetch stats from all endpoints.");
       }
       
-      // Update homes serviced with fade-in animation
       const formatted = stats.homesServicedThisMonth.toLocaleString("en-IN");
-      statsHomesServiced.innerHTML = `${formatted}+`; // Replace loading placeholder
+      statsHomesServiced.innerHTML = `${formatted}+`;
       statsHomesServiced.style.opacity = "0";
-      setTimeout(() => {
-        statsHomesServiced.style.transition = "opacity 0.5s ease-in-out";
-        statsHomesServiced.style.opacity = "1";
-      }, 10);
+      setTimeout(() => { statsHomesServiced.style.transition = "opacity 0.5s ease-in-out"; statsHomesServiced.style.opacity = "1"; }, 10);
       
-      // Update plumbing ETA with fade-in animation
-      statsPlumbing.innerHTML = ""; // Clear loading placeholder
+      statsPlumbing.innerHTML = "";
       statsPlumbing.textContent = stats.plumbingAvgETA;
       statsPlumbing.style.opacity = "0";
-      setTimeout(() => {
-        statsPlumbing.style.transition = "opacity 0.5s ease-in-out";
-        statsPlumbing.style.opacity = "1";
-      }, 10);
+      setTimeout(() => { statsPlumbing.style.transition = "opacity 0.5s ease-in-out"; statsPlumbing.style.opacity = "1"; }, 10);
       
-      // Update cleaning slots with fade-in animation
-      statsCleaning.innerHTML = ""; // Clear loading placeholder
+      statsCleaning.innerHTML = "";
       statsCleaning.textContent = stats.cleaningSlotsToday;
       statsCleaning.style.opacity = "0";
-      setTimeout(() => {
-        statsCleaning.style.transition = "opacity 0.5s ease-in-out";
-        statsCleaning.style.opacity = "1";
-      }, 10);
+      setTimeout(() => { statsCleaning.style.transition = "opacity 0.5s ease-in-out"; statsCleaning.style.opacity = "1"; }, 10);
       
-      // Update electrician dispatch with fade-in animation
-      statsElectrician.innerHTML = ""; // Clear loading placeholder
+      statsElectrician.innerHTML = "";
       statsElectrician.textContent = stats.electricianDispatchTime;
       statsElectrician.style.opacity = "0";
-      setTimeout(() => {
-        statsElectrician.style.transition = "opacity 0.5s ease-in-out";
-        statsElectrician.style.opacity = "1";
-      }, 10);
+      setTimeout(() => { statsElectrician.style.transition = "opacity 0.5s ease-in-out"; statsElectrician.style.opacity = "1"; }, 10);
       
-      console.log("✅ Stats updated successfully!");
-      console.log("📊 Current stats:", stats);
-      
-      // Auto-refresh stats every 30 seconds
       setTimeout(loadLiveStats, 30000);
       
     } catch (error) {
       console.error("❌ Error loading live stats:", error);
-      console.error("Error details:", {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
       
-      // Show fallback/default values on error ONLY if still showing loading state
-      console.warn("⚠️ Using fallback/default stats values after API failure");
+      if (statsHomesServiced) { statsHomesServiced.innerHTML = "2,870+"; statsHomesServiced.style.opacity = "1"; }
+      if (statsPlumbing) { statsPlumbing.textContent = "38 min avg ETA"; statsPlumbing.style.opacity = "1"; }
+      if (statsCleaning) { statsCleaning.textContent = "6 open today"; statsCleaning.style.opacity = "1"; }
+      if (statsElectrician) { statsElectrician.textContent = "Under 60 min"; statsElectrician.style.opacity = "1"; }
       
-      // Only set defaults if elements are still showing loading placeholders
-      if (statsHomesServiced) {
-        const currentContent = statsHomesServiced.innerHTML || statsHomesServiced.textContent || "";
-        if (currentContent.includes("animate-pulse") || currentContent.trim() === "" || currentContent === "2,870+") {
-          console.log("Setting default homes serviced: 2,870+");
-          statsHomesServiced.innerHTML = "2,870+";
-          statsHomesServiced.style.opacity = "1";
-        }
-      }
-      
-      if (statsPlumbing) {
-        const currentContent = statsPlumbing.innerHTML || statsPlumbing.textContent || "";
-        if (currentContent.includes("animate-pulse") || currentContent.trim() === "" || currentContent === "38 min avg ETA") {
-          console.log("Setting default plumbing: 38 min avg ETA");
-          statsPlumbing.textContent = "38 min avg ETA";
-          statsPlumbing.style.opacity = "1";
-        }
-      }
-      
-      if (statsCleaning) {
-        const currentContent = statsCleaning.innerHTML || statsCleaning.textContent || "";
-        if (currentContent.includes("animate-pulse") || currentContent.trim() === "" || currentContent === "6 open today") {
-          console.log("Setting default cleaning: 6 open today");
-          statsCleaning.textContent = "6 open today";
-          statsCleaning.style.opacity = "1";
-        }
-      }
-      
-      if (statsElectrician) {
-        const currentContent = statsElectrician.innerHTML || statsElectrician.textContent || "";
-        if (currentContent.includes("animate-pulse") || currentContent.trim() === "" || currentContent === "Under 60 min") {
-          console.log("Setting default electrician: Under 60 min");
-          statsElectrician.textContent = "Under 60 min";
-          statsElectrician.style.opacity = "1";
-        }
-      }
-      
-      console.log("ℹ️ Retrying stats fetch in 10 seconds...");
-      console.log("💡 Make sure backend is running: cd Final/backend && npm start");
-      // Retry after 10 seconds on error
       setTimeout(loadLiveStats, 10000);
     }
   }
   
-  // Test function to check backend connectivity
   window.testStatsEndpoint = async function() {
     console.log("🧪 Testing stats endpoint...");
-    const apiBases = [
-      "http://localhost:3000/api",
-      "http://localhost:4000/api",
-      "http://127.0.0.1:3000/api",
-      "http://127.0.0.1:4000/api"
-    ];
-    
+    const apiBases = ["http://localhost:3000/api", "http://127.0.0.1:3000/api"];
     for (const apiBase of apiBases) {
       try {
-        console.log(`Testing ${apiBase}/stats...`);
-        const response = await fetch(`${apiBase}/stats`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-cache"
-        });
+        const response = await fetch(`${apiBase}/stats`, { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-cache" });
         const data = await response.json();
         console.log(`✅ Success! Response from ${apiBase}:`, data);
         return data;
@@ -1204,35 +1061,27 @@ const SkillLinkHome = (() => {
         console.error(`❌ Failed ${apiBase}:`, error.message);
       }
     }
-    console.error("❌ All endpoints failed. Is the backend server running?");
     return null;
   };
 
   function init() {
     renderConstructionWorkers();
     renderServices();
-    // Featured services and testimonials will be sorted by location in their render functions
     renderFeaturedServices();
     renderTestimonials();
     renderJobs();
     initMap();
     initLocationForm();
     initCtaButtons();
-    initProfileMenu(); // Initialize profile menu
-    
-    // Initialize Socket.IO for real-time stats updates
+    initProfileMenu();
     initSocketIO();
     
-    // Load live stats after a short delay to ensure DOM is ready
     setTimeout(() => {
-      console.log("🚀 Initializing live stats...");
-      loadLiveStats(); // Load live stats immediately - don't set defaults first
+      loadLiveStats();
     }, 500);
     
-    // Re-render location-based content when location is saved
     const locationForm = document.getElementById("location-form");
     if (locationForm) {
-      const originalSubmit = locationForm.onsubmit;
       locationForm.addEventListener("submit", (e) => {
         setTimeout(() => {
           renderFeaturedServices();
@@ -1241,20 +1090,16 @@ const SkillLinkHome = (() => {
       });
     }
 
-
     selectors.mobileToggle?.addEventListener("click", toggleMobileNav);
   }
 
   document.addEventListener("DOMContentLoaded", init);
   
-  // Expose loadLiveStats globally for manual refresh/testing
   window.loadLiveStats = loadLiveStats;
-  
-  // Expose initProfileMenu globally
   window.initProfileMenu = initProfileMenu;
   
   return { state, loadLiveStats, initProfileMenu };
+
 })();
 
 window.SkillLinkHome = SkillLinkHome;
-

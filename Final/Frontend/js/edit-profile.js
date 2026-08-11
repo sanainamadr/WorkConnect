@@ -1,8 +1,20 @@
+// Use centralized API config (port 3000)
 const API_BASE = "http://localhost:3000/api";
-const API_BASE_ALT = "http://localhost:4000/api";
+
+// Safe storage access
+function safeGetStorage(key, defaultValue = null) {
+  try {
+    const item = localStorage.getItem(key);
+    if (item === null) return defaultValue;
+    return JSON.parse(item);
+  } catch (error) {
+    console.error(`Error reading localStorage key "${key}":`, error);
+    return defaultValue;
+  }
+}
 
 const token = localStorage.getItem("token");
-const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+const storedUser = safeGetStorage("user", null);
 
 // Redirect if not logged in
 if (!token || !storedUser) {
@@ -72,7 +84,7 @@ function showToast(message, type = "success") {
 async function fetchUserProfile() {
   const endpoints = [
     `${API_BASE}/auth/verify`,
-    `${API_BASE_ALT}/auth/verify`,
+    `${API_BASE}/auth/verify`,
   ];
 
   for (const endpoint of endpoints) {
@@ -322,9 +334,7 @@ async function updateProfile() {
     // Use universal profile update endpoint
     const endpoints = [
       `${API_BASE}/auth/profile`,
-      `${API_BASE_ALT}/auth/profile`,
       `${API_BASE}/worker/update-profile/${currentUser._id || currentUser.id}`,
-      `${API_BASE_ALT}/worker/update-profile/${currentUser._id || currentUser.id}`,
     ];
 
     let success = false;
@@ -364,9 +374,7 @@ async function updateProfile() {
         
         const avatarEndpoints = [
           `${API_BASE}/auth/upload-avatar`,
-          `${API_BASE_ALT}/auth/upload-avatar`,
           `${API_BASE}/worker/upload-avatar/${userId}`,
-          `${API_BASE_ALT}/worker/upload-avatar/${userId}`,
         ];
 
         for (const avatarEndpoint of avatarEndpoints) {

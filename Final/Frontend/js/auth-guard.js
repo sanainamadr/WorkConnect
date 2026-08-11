@@ -1,8 +1,8 @@
 // Comprehensive Authorization and Access Control System
 // Protects routes and UI elements based on user roles
 
+// Use centralized API config (port 3000)
 const API_BASE = "http://localhost:3000/api/auth";
-const API_BASE_ALT = "http://localhost:4000/api";
 
 class AuthGuard {
   constructor() {
@@ -16,7 +16,7 @@ class AuthGuard {
     this.setupRouteProtection();
   }
 
-  // Load user from localStorage
+  // Load user from localStorage (safe)
   loadUser() {
     try {
       const userStr = localStorage.getItem("user");
@@ -26,6 +26,12 @@ class AuthGuard {
       console.error("Error loading user:", error);
       this.user = null;
       this.token = null;
+      // Clear invalid data
+      try {
+        localStorage.removeItem("user");
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
 
@@ -68,7 +74,11 @@ class AuthGuard {
         const data = await res.json();
         if (data.user) {
           this.user = data.user;
-          localStorage.setItem("user", JSON.stringify(data.user));
+          try {
+            localStorage.setItem("user", JSON.stringify(data.user));
+          } catch (error) {
+            console.error("Error saving user to localStorage:", error);
+          }
           return true;
         }
       }
@@ -172,60 +182,73 @@ class AuthGuard {
       });
 
       // Clear local storage regardless of API response
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      } catch (error) {
+        console.error("Error clearing localStorage:", error);
+      }
       this.user = null;
       this.token = null;
 
-      if (res.ok) {
-        window.location.href = "login.html";
-      } else {
-        window.location.href = "login.html";
-      }
+      window.location.href = "login.html";
     } catch (error) {
       console.error("Logout error:", error);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      } catch (e) {
+        // Ignore cleanup errors
+      }
       this.user = null;
       this.token = null;
       window.location.href = "login.html";
     }
   }
 
-  // Show/hide elements based on role
+  // Show/hide elements based on role (safe DOM access)
   toggleRoleElements() {
     // Worker-only elements
-    document.querySelectorAll("[data-role='worker']").forEach((el) => {
-      el.style.display = this.isWorker() ? "" : "none";
+    const workerEls = document.querySelectorAll("[data-role='worker']");
+    workerEls.forEach((el) => {
+      if (el) el.style.display = this.isWorker() ? "" : "none";
     });
 
     // Employer-only elements
-    document.querySelectorAll("[data-role='employer']").forEach((el) => {
-      el.style.display = this.isEmployer() ? "" : "none";
+    const employerEls = document.querySelectorAll("[data-role='employer']");
+    employerEls.forEach((el) => {
+      if (el) el.style.display = this.isEmployer() ? "" : "none";
     });
 
     // Authenticated user elements
-    document.querySelectorAll("[data-auth='required']").forEach((el) => {
-      el.style.display = this.isAuthenticated() ? "" : "none";
+    const authEls = document.querySelectorAll("[data-auth='required']");
+    authEls.forEach((el) => {
+      if (el) el.style.display = this.isAuthenticated() ? "" : "none";
     });
 
     // Guest-only elements
-    document.querySelectorAll("[data-auth='guest']").forEach((el) => {
-      el.style.display = !this.isAuthenticated() ? "" : "none";
+    const guestEls = document.querySelectorAll("[data-auth='guest']");
+    guestEls.forEach((el) => {
+      if (el) el.style.display = !this.isAuthenticated() ? "" : "none";
     });
 
     // Update user info in elements
     if (this.user) {
-      document.querySelectorAll("[data-user-name]").forEach((el) => {
-        el.textContent = `${this.user.firstName || ""} ${this.user.lastName || ""}`.trim() || "User";
+      const nameEls = document.querySelectorAll("[data-user-name]");
+      nameEls.forEach((el) => {
+        if (el) {
+          el.textContent = `${this.user.firstName || ""} ${this.user.lastName || ""}`.trim() || "User";
+        }
       });
 
-      document.querySelectorAll("[data-user-role]").forEach((el) => {
-        el.textContent = this.user.role || "";
+      const roleEls = document.querySelectorAll("[data-user-role]");
+      roleEls.forEach((el) => {
+        if (el) el.textContent = this.user.role || "";
       });
 
-      document.querySelectorAll("[data-user-email]").forEach((el) => {
-        el.textContent = this.user.email || "";
+      const emailEls = document.querySelectorAll("[data-user-email]");
+      emailEls.forEach((el) => {
+        if (el) el.textContent = this.user.email || "";
       });
     }
   }
@@ -267,32 +290,37 @@ class AuthGuard {
 // Create global instance
 const authGuard = new AuthGuard();
 
-// Initialize on DOM load
+// Initialize on DOM load (safe DOM access)
 document.addEventListener("DOMContentLoaded", () => {
   // Toggle role-based elements
   authGuard.toggleRoleElements();
 
   // Setup logout buttons
-  document.querySelectorAll("[data-action='logout']").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      authGuard.logout();
-    });
+  const logoutButtons = document.querySelectorAll("[data-action='logout']");
+  logoutButtons.forEach((btn) => {
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        authGuard.logout();
+      });
+    }
   });
 
   // Setup dashboard links based on role
   const dashboardLinks = document.querySelectorAll("[data-action='dashboard']");
   dashboardLinks.forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (authGuard.isWorker()) {
-        window.location.href = "worker-dashboard.html";
-      } else if (authGuard.isEmployer()) {
-        window.location.href = "employer-dashboard.html";
-      } else {
-        window.location.href = "login.html";
-      }
-    });
+    if (link) {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (authGuard.isWorker()) {
+          window.location.href = "worker-dashboard.html";
+        } else if (authGuard.isEmployer()) {
+          window.location.href = "employer-dashboard.html";
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+    }
   });
 });
 

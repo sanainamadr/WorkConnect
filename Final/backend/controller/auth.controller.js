@@ -6,41 +6,77 @@ import jwt from "jsonwebtoken";
 
 
 
-export  const signUp=async (req,res)=>{
-    try {
-      const {firstName,lastName,email,password,userName,role,workerType,city,phoneNumber}=req.body
-      console.log("✅ Register route hit");
-      console.log("Incoming registration data:", req.body);
-    if(!firstName || !lastName || !email || !password || !userName || !role){
-        return res.status(400).json({message:"send all details"})
+export const signUp = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, userName, role, workerType, city, phoneNumber } = req.body;
+    
+    // Enhanced logging for signup attempts
+    console.log("=".repeat(50));
+    console.log("📝 SIGNUP REQUEST");
+    console.log("=".repeat(50));
+    console.log(`   Time: ${new Date().toISOString()}`);
+    console.log(`   Role: ${role || 'NOT PROVIDED'}`);
+    console.log(`   Email: ${email || 'NOT PROVIDED'}`);
+    console.log(`   Username: ${userName || 'NOT PROVIDED'}`);
+    console.log("=".repeat(50));
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !userName || !role) {
+      console.error("❌ Signup failed: Missing required fields");
+      console.error(`   Missing: ${[
+        !firstName && 'firstName',
+        !lastName && 'lastName',
+        !email && 'email',
+        !password && 'password',
+        !userName && 'userName',
+        !role && 'role'
+      ].filter(Boolean).join(', ')}`);
+      return res.status(400).json({ message: "All required fields must be provided" });
     }
 
     // Validate role-specific fields
     if (role === "worker") {
       if (!workerType || !city || !phoneNumber) {
-        return res.status(400).json({message:"Worker type, city, and phone number are required for workers"})
+        console.error("❌ Signup failed: Worker missing required fields");
+        console.error(`   Missing: ${[
+          !workerType && 'workerType',
+          !city && 'city',
+          !phoneNumber && 'phoneNumber'
+        ].filter(Boolean).join(', ')}`);
+        return res.status(400).json({ message: "Worker type, city, and phone number are required for workers" });
       }
     } else if (role === "employer") {
       if (!city) {
-        return res.status(400).json({message:"City is required for employers"})
+        console.error("❌ Signup failed: Employer missing city");
+        return res.status(400).json({ message: "City is required for employers" });
       }
     }
 
-      let existUser=await User.findOne({email:email})
-      if(existUser){
-        return res.status(400).json({message:"User already exist"})
-      }
+    // Check if user already exists
+    let existUser = await User.findOne({ email: email });
+    if (existUser) {
+      console.error(`❌ Signup failed: User already exists with email: ${email}`);
+      return res.status(400).json({ message: "User already exists with this email" });
+    }
 
-      // Check if phone number already exists (for workers)
-      if (role === "worker" && phoneNumber) {
-        const existingPhone = await User.findOne({ phoneNumber });
-        if (existingPhone) {
-          return res.status(400).json({message:"Phone number already registered"})
-        }
+    // Check if phone number already exists (for workers)
+    if (role === "worker" && phoneNumber) {
+      const existingPhone = await User.findOne({ phoneNumber });
+      if (existingPhone) {
+        console.error(`❌ Signup failed: Phone number already registered: ${phoneNumber}`);
+        return res.status(400).json({ message: "Phone number already registered" });
       }
+    }
 
-      if (!password || typeof password !== "string") {
+    // Validate password
+    if (!password || typeof password !== "string") {
+      console.error("❌ Signup failed: Invalid password");
       return res.status(400).json({ message: "Password is required and must be a string" });
+    }
+
+    if (password.length < 6) {
+      console.error("❌ Signup failed: Password too short");
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -98,38 +134,77 @@ export  const signUp=async (req,res)=>{
         userResponse.phoneNumber = user.phoneNumber;
       }
 
-      return res.status(201).json({
-        token,
-        user: userResponse
-      })
-      
+    console.log(`✅ Signup successful: ${userResponse.email} (${role})`);
+    console.log(`   User ID: ${user._id}`);
+    console.log("=".repeat(50));
 
-    
-    } catch (error) {
-      console.log("Error is:",error);
+    return res.status(201).json({
+      token,
+      user: userResponse
+    });
+  } catch (error) {
+    // Enhanced error logging
+    console.error("=".repeat(50));
+    console.error("❌ SIGNUP ERROR");
+    console.error("=".repeat(50));
+    console.error(`   Time: ${new Date().toISOString()}`);
+    console.error(`   Error Type: ${error.name || 'Unknown'}`);
+    console.error(`   Error Message: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
+    console.error("=".repeat(50));
+
+    // Return appropriate error response
+    if (error.name === 'ValidationError') {
       return res.status(400).json({ message: error.message });
-      
-      
-      
     }
-}
+    if (error.name === 'MongoServerError' && error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({ message: `${field} already exists` });
+    }
+    
+    return res.status(500).json({ 
+      message: "Internal server error during signup",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
+    // Enhanced logging for login attempts
+    console.log("=".repeat(50));
+    console.log("🔐 LOGIN REQUEST");
+    console.log("=".repeat(50));
+    console.log(`   Time: ${new Date().toISOString()}`);
+    console.log(`   Email: ${email || 'NOT PROVIDED'}`);
+    console.log(`   Role: ${role || 'NOT PROVIDED'}`);
+    console.log("=".repeat(50));
+
+    // Validate required fields
     if (!email || !password || !role) {
+      console.error("❌ Login failed: Missing required fields");
+      console.error(`   Missing: ${[
+        !email && 'email',
+        !password && 'password',
+        !role && 'role'
+      ].filter(Boolean).join(', ')}`);
       return res.status(400).json({ message: "Email, password, and role are required" });
     }
 
+    // Find user by email and role
     const user = await User.findOne({ email, role }).select("+password");
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      console.error(`❌ Login failed: User not found - Email: ${email}, Role: ${role}`);
+      return res.status(404).json({ message: "User not found with this email and role" });
     }
 
+    // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      console.error(`❌ Login failed: Invalid password for email: ${email}`);
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -179,9 +254,27 @@ export const login = async (req, res) => {
         token,
         user: userResponse
       });
+
+    console.log(`✅ Login successful: ${userResponse.email} (${role})`);
+    console.log(`   User ID: ${user._id}`);
+    console.log("=".repeat(50));
   } catch (error) {
-    console.error('Login server error:', error);
-    res.status(500).json({ message: 'Server error: ' + error.message });
+    // Enhanced error logging
+    console.error("=".repeat(50));
+    console.error("❌ LOGIN ERROR");
+    console.error("=".repeat(50));
+    console.error(`   Time: ${new Date().toISOString()}`);
+    console.error(`   Email: ${req.body?.email || 'NOT PROVIDED'}`);
+    console.error(`   Error Type: ${error.name || 'Unknown'}`);
+    console.error(`   Error Message: ${error.message}`);
+    console.error(`   Stack: ${error.stack}`);
+    console.error("=".repeat(50));
+
+    // Return appropriate error response
+    return res.status(500).json({ 
+      message: "Internal server error during login",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

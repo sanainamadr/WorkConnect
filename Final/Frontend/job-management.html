@@ -118,6 +118,29 @@
               <p class="text-ink-muted text-center py-8">Loading applicants...</p>
             </div>
           </div>
+
+          <!-- Recommended Workers (matching engine) -->
+          <div id="recommendationsSection" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:p-8">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <h2 class="text-2xl font-semibold">Recommended Workers</h2>
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                    <span class="material-symbols-outlined text-xs">bolt</span>
+                    AI Matched
+                  </span>
+                </div>
+                <p class="text-sm text-ink-muted">Workers scored by skill fit, proximity, experience &amp; availability</p>
+              </div>
+              <button id="refreshRecommendations" class="text-sm text-primary font-semibold flex items-center gap-1 hover:text-primary/80 transition">
+                <span class="material-symbols-outlined text-base">refresh</span>
+                Refresh
+              </button>
+            </div>
+            <div id="recommendationsContainer" class="space-y-4">
+              <p class="text-ink-muted text-center py-8">Loading recommendations...</p>
+            </div>
+          </div>
         </div>
 
         <div id="errorState" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-8 text-center">

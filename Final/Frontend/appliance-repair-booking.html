@@ -232,28 +232,12 @@
   </footer>
 
   <!-- Scripts -->
+  <!-- Legacy scripts (to be migrated) -->
   <script src="js/auth-guard.js"></script>
   <script src="js/booking-common.js"></script>
   <script src="js/booking-cart.js"></script>
   <script src="js/booking-dynamic.js"></script>
-  <script>
-    // Time slot loading for appliance repair
-    document.getElementById("booking-date")?.addEventListener("change", async (e) => {
-      const selectedDate = e.target.value;
-      const workerId = localStorage.getItem("selectedWorkerId");
-      if (!workerId || !selectedDate) return;
-
-      try {
-        const res = await fetch(`http://localhost:3000/api/workers/${workerId}/availability?date=${selectedDate}`);
-        const data = await res.json();
-        const timeSelect = document.getElementById("booking-time");
-        if (timeSelect && data.slots) {
-          timeSelect.innerHTML = data.slots.map(slot => `<option value="${slot}">${slot}</option>`).join("");
-        }
-      } catch (err) {
-        console.error("Error loading time slots:", err);
-      }
-    });
-  </script>
+  <!-- New modular script -->
+  <script type="module" src="js/pages/appliance-repair-booking.js"></script>
 </body>
 </html>

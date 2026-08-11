@@ -82,15 +82,36 @@
       animation: slideIn 0.3s ease-out;
     }
     
+    /* Gradient background for main content */
+    .main-gradient-bg {
+      background: linear-gradient(135deg, #f7f6f8 0%, #ede9f7 100%);
+    }
+    .dark .main-gradient-bg {
+      background: linear-gradient(135deg, #191022 0%, #2a183a 100%);
+    }
+    
     /* Booking card enhancements */
     .booking-card {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 24px 0 rgba(127,19,236,0.07), 0 1.5px 6px 0 rgba(0,0,0,0.03);
+      border: 1.5px solid #ede9f7;
+      padding: 1.5rem 1.25rem;
+      transition: box-shadow 0.3s, transform 0.3s;
+      position: relative;
+      overflow: hidden;
       animation: fadeIn 0.4s ease-out;
     }
     
+    .dark .booking-card {
+      background: #23142f;
+      border-color: #2a183a;
+      box-shadow: 0 4px 24px 0 rgba(127,19,236,0.13), 0 1.5px 6px 0 rgba(0,0,0,0.09);
+    }
+    
     .booking-card:hover {
-      transform: translateY(-4px) scale(1.01);
-      box-shadow: 0 20px 25px -5px rgba(127, 19, 236, 0.1), 0 10px 10px -5px rgba(127, 19, 236, 0.04);
+      box-shadow: 0 8px 32px 0 rgba(127,19,236,0.18), 0 3px 12px 0 rgba(0,0,0,0.07);
+      transform: translateY(-4px) scale(1.02);
     }
     
     /* Filter tab enhancements */
@@ -98,6 +119,7 @@
       position: relative;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border: 2px solid transparent;
+      overflow: hidden;
     }
     
     .filter-tab.active {
@@ -122,6 +144,26 @@
     .dark .filter-tab:hover:not(.active) {
       background: rgba(127, 19, 236, 0.1);
       border-color: rgba(127, 19, 236, 0.2);
+    }
+    
+    /* Animated underline for filter tabs */
+    .filter-tab.active::after {
+      content: '';
+      display: block;
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 3px;
+      background: linear-gradient(90deg, #7f13ec 0%, #a855f7 100%);
+      border-radius: 2px;
+      animation: underlineIn 0.3s;
+    }
+    
+    @keyframes underlineIn {
+      from { width: 0; opacity: 0; }
+      to { width: 60%; opacity: 1; }
     }
     
     /* Loading skeleton */
@@ -261,6 +303,59 @@
       background: linear-gradient(135deg, rgba(127, 19, 236, 0.2) 0%, rgba(127, 19, 236, 0.1) 100%);
       transform: scale(1.1);
     }
+    
+    /* Floating action button */
+    .fab {
+      position: fixed;
+      right: 2rem;
+      bottom: 2.5rem;
+      z-index: 50;
+      background: linear-gradient(135deg, #7f13ec 60%, #a855f7 100%);
+      color: #fff;
+      border-radius: 9999px;
+      box-shadow: 0 8px 32px 0 rgba(127,19,236,0.18);
+      padding: 1.1rem 1.5rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    }
+    
+    .fab:hover {
+      background: linear-gradient(135deg, #a855f7 0%, #7f13ec 100%);
+      box-shadow: 0 12px 40px 0 rgba(127,19,236,0.28);
+      transform: translateY(-2px) scale(1.04);
+    }
+    
+    .fab .material-symbols-outlined {
+      font-size: 1.5rem;
+    }
+    
+    /* Enhanced loading/empty state */
+    #loadingState .material-symbols-outlined {
+      color: #a855f7;
+      filter: drop-shadow(0 0 6px #7f13ec33);
+    }
+    
+    .dark #loadingState .material-symbols-outlined {
+      color: #7f13ec;
+    }
+    
+    #emptyState .empty-state-icon {
+      color: #a855f7;
+      filter: drop-shadow(0 0 8px #7f13ec22);
+    }
+    
+    .dark #emptyState .empty-state-icon {
+      color: #7f13ec;
+    }
+    
+    /* Responsive tweaks */
+    @media (max-width: 640px) {
+      .fab { right: 1rem; bottom: 1.2rem; padding: 0.9rem 1.2rem; font-size: 1rem; }
+    }
   </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200 min-h-screen">
@@ -289,7 +384,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 container mx-auto px-4 py-8 lg:px-10">
+    <main class="flex-1 container mx-auto px-4 py-8 lg:px-10 main-gradient-bg rounded-2xl shadow-xl">
       <div class="mb-8 animate-fadeIn">
         <h1 class="text-5xl font-black text-slate-900 dark:text-white mb-3 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">My Bookings</h1>
         <p class="text-base text-slate-600 dark:text-slate-400">Track and manage all your service bookings in one place</p>
@@ -336,7 +431,7 @@
 
       <!-- Bookings Grid -->
       <div id="bookingsContainer" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <!-- Bookings will be rendered here -->
+        <!-- Bookings will be rendered here as .booking-card -->
       </div>
     </main>
 
@@ -348,6 +443,12 @@
         </div>
       </div>
     </footer>
+
+    <!-- Floating Action Button -->
+    <a href="index.html" class="fab shadow-lg">
+      <span class="material-symbols-outlined">add_circle</span>
+      Book a Service
+    </a>
   </div>
 
   <script src="js/auth-guard.js"></script>

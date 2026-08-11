@@ -63,9 +63,25 @@ const userSchema = new mongoose.Schema(
       trim: true,
       // Only required for workers, validated in controller
     },
+    // Matching engine fields (meaningful for role: "worker")
+    skills: {
+      type: [String],
+      default: [],
+    },
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: [0, 0] },
+    },
   },
   { timestamps: true }
 );
+
+// 2dsphere index for geo-proximity worker queries
+userSchema.index({ location: "2dsphere" });
 
 const User = mongoose.model("User", userSchema);
 

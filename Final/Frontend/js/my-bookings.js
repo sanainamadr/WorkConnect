@@ -1,8 +1,20 @@
+// Use centralized API config (port 3000)
 const API_BASE = "http://localhost:3000/api";
-const API_BASE_ALT = "http://localhost:4000/api";
+
+// Safe storage access
+function safeGetStorage(key, defaultValue = null) {
+  try {
+    const item = localStorage.getItem(key);
+    if (item === null) return defaultValue;
+    return JSON.parse(item);
+  } catch (error) {
+    console.error(`Error reading localStorage key "${key}":`, error);
+    return defaultValue;
+  }
+}
 
 const token = localStorage.getItem("token");
-const user = JSON.parse(localStorage.getItem("user") || "null");
+const user = safeGetStorage("user", null);
 
 // Redirect if not logged in
 if (!token || !user) {
@@ -215,8 +227,8 @@ async function fetchBookingsFromAPI() {
   const endpoints = [
     `${API_BASE}/bookings`,
     `${API_BASE}/user/bookings`,
-    `${API_BASE_ALT}/bookings`,
-    `${API_BASE_ALT}/user/bookings`,
+    `${API_BASE}/bookings`,
+    `${API_BASE}/user/bookings`,
   ];
 
   for (const endpoint of endpoints) {

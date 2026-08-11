@@ -83,7 +83,7 @@ availabilityToggle.addEventListener("change", async () => {
   const newStatus = availabilityToggle.checked ? "available" : "unavailable";
 
   try {
-    const res = await fetch(`${API_BASE}/worker/update-availability`, {
+    const res = await fetch(`${API_BASE}/worker/${user._id}/update-availability`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
